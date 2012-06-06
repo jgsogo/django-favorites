@@ -49,6 +49,10 @@ def _get_next(request):
 
 @login_required
 def folder_list(request):
+    """Lists user's folders
+
+    :template favorites/folder_list.html: - ``object_list`` as list of user's folders
+    """
     object_list = Folder.objects.filter(user=request.user)
     ctx = {'object_list': object_list}
     return render(request, 'favorites/folder_list.html', ctx)
@@ -56,6 +60,11 @@ def folder_list(request):
 
 @login_required
 def folder_add(request):
+    """Add a folder
+
+    :template favorites/folder_add.html: - ``form`` is a :class:`favorites.forms.FolderForm`.
+                                         - ``next_url`` value returned by :func:`favorites.views._get_next`
+    """
     if request.method == 'POST':
         form = FolderForm(request.POST)
         if form.is_valid():
@@ -71,6 +80,14 @@ def folder_add(request):
 
 @login_required
 def folder_update(request, object_id):
+    """Update a folder. If current user doesn't own the folder, it returns 403 error.
+
+    :param object_id: id of the :class:`favorites.models.Folder` that will be updated.
+
+    :template favorites/folder_add.html: - ``form`` is a :class:`favorites.forms.FolderForm`.
+                                         - ``next`` value returned by :func:`favorites.views._get_next`.
+                                         - ``folder`` updated  :class:`favorites.models.Folder` object."""
+
     folder = get_object_or_404(Folder, pk=object_id)
     # check credentials
     if folder.user != request.user:
@@ -91,6 +108,13 @@ def folder_update(request, object_id):
 
 @login_required
 def folder_delete(request, object_id):
+    """Delete a folder with confirmation. If current user doesn't own the folder,
+    it returns a 403 error.
+
+    :param object_id: id of the :class:`favorites.models.Folder` to be deleted
+
+    :template favorites/folder_delete.html: - ``folder`` :class:`favorites.models.Folder` to be deleted.
+                                            - ``next`` value returned by :func:`favorites.views._get_next`."""
     folder = get_object_or_404(Folder, pk=object_id)
     # check credentials
     if request.user != folder.user:
@@ -111,6 +135,9 @@ def folder_delete(request, object_id):
 
 @login_required
 def favorite_list(request):
+    """Lists user's favorites
+
+    :template favorites/favorite_list.html: - ``favorites`` list of user's :class:`favorites.models.Favorite`."""
     object_list = Favorite.objects.favorites_for_user(request.user)
     ctx = {'favorites': object_list}
     return render(request, 'favorites/favorite_list.html', ctx)
@@ -125,10 +152,19 @@ def favorite_add(request, app_label, object_name, object_id):  #FIXME factor
     object represented by `app_label`, `object_name` and `object_id`
     creation. It raise a 400 exception if there is not such object.
     If it's a `POST` creates the favorite object if there isn't
-    a favorite already. If validation fails the it renders an
+    a favorite already. If validation fails it renders an
     insightful error message. If the validation succeed the favorite is
-    added to user profile and a redirection is returned. If the object
-    is already a favorite renders a message."""
+    added and a redirection is returned. If the object is already a favorite 
+    renders a message.
+
+    :template favorites/favorite_already_favorite.html: - ``object`` object targeted by the favorite add operation.
+                                                        - ``next`` value returned by :func:`favorites.views._get_next`.
+                                                        - ``favorite`` :class:`favorites.models.Favorite`.
+
+    :template favorites/favorite_add.html: - ``form`` :class:`favorites.forms.UserFolderChoicesForm` instance
+                                           - ``object`` object targeted by the favorite add operation.
+                                           - ``next`` value returned by :func:`favorites.views._get_next`.
+    """
 
     # Is it a valid object ?
     instance_or_response = get_object_or_400_response(app_label, object_name, object_id)
@@ -176,7 +212,8 @@ def favorite_delete_for_object(request,
                                object_id):
     """Renders a formular to get confirmation to unfavorite the object
     represented by `app_label`, `object_name` and `object_id`. It raise a 404
-    exception if there is not such object. Redirects to ``favorite_delete``."""
+    exception if there is no such object. If the action is successful the user
+    is redirect using :func:`favorites.views._get_next`."""
     # Is it a valid object ?
     instance_or_response = get_object_or_400_response(app_label, object_name, object_id)
     if isinstance(instance_or_response, HttpResponse):
@@ -197,8 +234,13 @@ def favorite_delete_for_object(request,
 def favorite_delete(request, object_id):
     """Renders a formular to get confirmation to unfavorite the object
     the favorite that has ``object_id`` as id. It raise a 404 if there
-    is not such a favorite, a HttpResponseForbidden if the favorite is not
-    owned by current user"""
+    is not such a favorite, a 403 error is returned if the favorite is not
+    owned by current user. If the action is successful the user
+    is redirect using :func:`favorites.views._get_next`.
+
+    :template favorites/favorite_delete.html: - ``form`` :class:`favorites.forms.Validation` instance.
+                                              - ``favorite`` :class:`favorites.models.Favorite` to be deleted.
+                                              - ``next`` value returned by :func:`favorites.views._get_next`."""
     favorite = get_object_or_404(Favorite, pk=object_id)
     # check credentials
     if not request.user == favorite.user:
@@ -221,7 +263,13 @@ def favorite_delete(request, object_id):
 
 @login_required
 def favorite_move(request, object_id):
-    """Renders a formular to move a favorite to another folder"""
+    """Renders a formular to move a favorite to another folder. If the action is successful the user
+    is redirect using :func:`favorites.views._get_next`.
+
+    :template favorites/favorite_move.html: - ``favorite`` :class:`favorites.models.Favorite` instance target of the operation.
+                                            - ``next`` value returned by :func:`favorites.views._get_next`.
+                                            - ``form`` :class:`favorites.forms.UserFolderChoicesForm` instance.
+    """
     favorite = get_object_or_404(Favorite, pk=object_id)
     # check credentials
     if not favorite.user == request.user:
@@ -251,7 +299,13 @@ def favorite_move(request, object_id):
 
 @login_required
 def favorite_move_to_folder(request, favorite_id, folder_id):
-    """moves a favorite to a folder provided as a get parameter with confirmation"""
+    """moves a favorite to a folder provided as a get parameter with confirmation. 
+    If the action is successful the user is redirect using :func:`favorites.views._get_next`.
+    
+    :template favorites/favorite_move_to_folder.html: - ``form`` :class:`favorites.forms.HiddenFolderForm` instance.
+                                                      - ``favorite`` :class:`favorites.models.Favorite` instance.
+                                                      - ``folder`` :class:`favorites.models.Folder` instance.
+                                                      - ``next`` value returned by :func:`favorites.views._get_next`."""
     favorite = get_object_or_404(Favorite, pk=favorite_id)
     # check credentials on favorite
     if request.user != favorite.user:
@@ -280,7 +334,10 @@ def favorite_move_to_folder(request, favorite_id, folder_id):
 
 @login_required
 def favorite_toggle_share(request, favorite_id):
-    """Confirm before submiting the toggle share action"""
+    """Confirm before submiting the toggle share action. If the action is successful 
+    the user is redirect using :func:`favorites.views._get_next`.
+
+    :template favorites/favorite_toggle_share.html: - ``favorite`` :class:`favorites.models.Favorite` instance."""
     favorite = get_object_or_404(Favorite, pk=favorite_id)
     # check crendentials
     if request.user != favorite.user:
@@ -306,7 +363,16 @@ def favorite_content_type_and_folder_list(request, app_label, object_name, folde
 
     The optional folder_id parameter will be used to filter the favorites, if
     passed.
-    """
+
+    :template favorites/favorite_content_type_list.html: - ``app_label`` Generic Foreign Key parameter.
+                                                         - ``object_name`` Generic Foreign Key parameter.
+
+                                                         - ``favorites`` :class:`favorites.models.Favorites`
+
+    :template favorites/favorite_{{app_label}}_{{object_name}}_list.html: same as above
+
+    :template favorites/favorite_{{app_label}}_{{object_name}}_by_folder_list.html: - same as above and 
+                                                                                    - ``folder`` :class:`favorites.models.Folder` instance."""
     model = get_model(app_label, object_name)
     if model is None:
         return HttpResponseBadRequest()

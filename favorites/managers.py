@@ -6,8 +6,7 @@ qn = connection.ops.quote_name
 
 
 class FavoritesManagerMixin(object):
-    """ A Mixin to add a `favorite__favorite` column via extra 
-    """
+    """A Mixin to add a `favorite__favorite` column via extra"""
     def with_favorite_for(self, user, all=True):
         """ Adds a column favorite__favorite to the returned object, which
         indicates whether or not this item is a favorite for a user
@@ -39,16 +38,14 @@ WHERE %(favorites_db_table)s.object_id = %(pk_field)s and
 
 
 class FavoriteManager(models.Manager):
-    """ A Manager for Favorites
-    """
+    """A Manager for Favorites"""
     def favorites_for_user(self, user):
         """ Returns Favorites for a specific user
         """
         return self.get_query_set().filter(user=user)
 
     def favorites_for_model(self, model, user=None):
-        """ Returns Favorites for a specific model
-        """
+        """Returns Favorites for a specific model"""
         content_type = ContentType.objects.get_for_model(model)
         qs = self.get_query_set().filter(content_type=content_type)
         if user:
@@ -56,8 +53,7 @@ class FavoriteManager(models.Manager):
         return qs
 
     def favorites_for_object(self, obj, user=None):
-        """ Returns Favorites for a specific object
-        """
+        """Returns Favorites for a specific object"""
         content_type = ContentType.objects.get_for_model(type(obj))
         qs = self.get_query_set().filter(content_type=content_type, 
                                          object_id=obj.pk)
@@ -67,10 +63,7 @@ class FavoriteManager(models.Manager):
         return qs
 
     def favorites_for_objects(self, object_list, user=None):
-        """
-        Get a dictionary mapping object ids to favorite
-        of votes for each object.
-        """
+        """Get a dictionary mapping object ids to favorite of votes for each object."""
         object_ids = [o.pk for o in object_list]
         if not object_ids:
             return {}
@@ -93,14 +86,21 @@ class FavoriteManager(models.Manager):
         return results
 
     def favorite_for_user(self, obj, user):
-        """Returns the favorite, if exists for obj by user
-        """
+        """Returns the favorite, if exists for obj by user"""
         content_type = ContentType.objects.get_for_model(type(obj))
         return self.get_query_set().get(content_type=content_type,
                                     user=user, object_id=obj.pk)
 
     @classmethod
     def create_favorite(cls, content_object, user, folder=None):
+        """create a :class:`favorites.models.Favorite` 
+        
+        :param content_object: object which is favorited.
+        :param user: :class:`django.contrib.auth.models.User` for which the favorite is created.
+        :param folder: :class:`favorites.models.Folder` where to put the favorite in. This should be
+                        a folder owned by ``user``.
+        :returns: a :class:`favorites.models.Favorite`.
+        """
         content_type = ContentType.objects.get_for_model(type(content_object))
         Favorite = models.get_model('favorites', 'Favorite')
         favorite = Favorite(

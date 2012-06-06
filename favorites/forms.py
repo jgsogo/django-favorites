@@ -5,7 +5,7 @@ from models import Favorite
 
 class EmptyChoiceField(forms.ChoiceField):
     """
-    Utils to make more easy and DRY to manage an empty label when needed.
+    Choice field with an empty option when the the field is no required
     """
     def __init__(self, choices=(), empty_label="-----", required=True,
         widget=None, label=None, initial=None, help_text=None, *args, **kwargs):
@@ -20,11 +20,12 @@ class EmptyChoiceField(forms.ChoiceField):
 
 
 class FolderForm(forms.Form):
+    """Folder creation form"""
     name = forms.CharField(max_length=100, label=_("name"))
 
 
 class UserFolderChoicesForm(forms.Form):
-    """Form to confirm favorite creation"""
+    """:class:`favorites.models.Favorite` creation form with user's :class:`favorites.models.Folder` as choices"""
 
     def __init__(self, choices, **kwargs):
         super(UserFolderChoicesForm, self).__init__(**kwargs)
@@ -37,7 +38,9 @@ class UserFolderChoicesForm(forms.Form):
 
 
 class ValidationForm(forms.Form):
+    """Empty form used for validation, before processing an action"""
     pass
 
 class HiddenFolderForm(forms.Form):
+    """Form with hidden an hidden field used to store :class:`favorites.models.Folder` id"""
     folder_id = forms.IntegerField(widget=forms.HiddenInput())
