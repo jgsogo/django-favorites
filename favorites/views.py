@@ -3,10 +3,11 @@ from django.shortcuts import get_object_or_404, redirect, render_to_response
 from django.contrib.auth.decorators import login_required
 from django.contrib.contenttypes.models import ContentType
 from django.template import RequestContext
-from models import Favorite
-from forms import DeleteFavoriteForm
+from favorites.models import Favorite
+from favorites.forms import DeleteFavoriteForm
 from django.http import HttpResponse
 from django.utils import simplejson
+from django.db.models import Avg
 
 @login_required
 def ajax_add_favorite(request):
@@ -15,23 +16,20 @@ def ajax_add_favorite(request):
         object_id = request.POST.get("object_id")
         content_type=get_object_or_404(ContentType, pk=request.POST.get("content_type_id"))
         obj = content_type.get_object_for_this_type(pk=object_id)
+        score = request.POST.get('score', 2.5)
 
-        # check if it was created already
-        if Favorite.objects.filter(content_type=content_type, object_id=object_id,\
-                                  user=request.user):
-            # return conflict response code if already satisfied
-            return HttpResponse(status=409)
-        
-        #if not create it
-        favorite = Favorite.objects.create_favorite(obj, request.user)
-        count = Favorite.objects.favorites_for_object(obj).count()
-        return HttpResponse(simplejson.dumps({'count': count}),
-                            'application/javascript',
-                            status=200)
+        obj, created = Favorite.objects.get_or_create(content_type=content_type, object_id=object_id,\
+                                                        user=request.user, score=score)
+
+        data = {'score' : score,
+                'score__avg' : obj.average_score(),
+                'count' : obj.num_favorites()}
+
+        return HttpResponse(simplejson.dumps(data), 'application/javascript', status=200)
     else:
         return HttpResponse(status=405)
-        
-        
+
+
 @login_required
 def ajax_remove_favorite(request):
     """ Adds favourite returns Http codes"""
@@ -43,15 +41,18 @@ def ajax_remove_favorite(request):
                                                content_type=content_type,
                                                user=request.user)
         favorite.delete()
-        obj = content_type.get_object_for_this_type(pk=object_id)
-        count = Favorite.objects.favorites_for_object(obj).count()
-        return HttpResponse(simplejson.dumps({'count': count}),
-                            'application/javascript',
-                            status=200)
+
+        qs = Favorite.objects.filter(content_type=content_type, object_id=object_id)
+
+        data = {'score': None,
+                'score__avg' : qs.clone().aggregate(Avg('score')).get('score__avg', None)
+                'count' : qs.clone().count()}
+
+        return HttpResponse(simplejson.dumps(data), 'application/javascript', status=200)
     else:
         return HttpResponse(status=405)
-    
-    
+
+
 @login_required
 def create_favorite(request, object_id, queryset, redirect_to=None,
         template_name=None, extra_context=None):
@@ -64,11 +65,11 @@ def create_favorite(request, object_id, queryset, redirect_to=None,
     Raises Http404 if content object does not exist.
 
     Example of usage (urls.py):
-        url(r'favorites/add/(?P<object_id>\d+)/$', 
+        url(r'favorites/add/(?P<object_id>\d+)/$',
             'favorites.views.create_favorite', kwargs={
                 'queryset': MyModel.objects.all(),
             }, name='add-to-favorites')
-        
+
     """
     obj = get_object_or_404(queryset, pk=object_id)
     content_type=ContentType.objects.get_for_model(obj)
@@ -93,7 +94,7 @@ def favorite_list(request, model_class, **kwargs):
     Other parameters are same as object_list.
 
     Example of usage (urls.py):
-        url(r'favorites/my_model/$', 
+        url(r'favorites/my_model/$',
             'favorites.views.favorite_list', kwargs={
                 'template_name': 'favorites/mymodel_list.html',
                 'model_class': get_model('my_app.MyModel'),

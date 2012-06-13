@@ -12,7 +12,7 @@ class FavoriteManager(models.Manager):
         """ Returns Favorites for a specific user
         """
         return self.get_query_set().filter(user=user)
-    
+
     def favorites_for_model(self, model, user=None):
         """ Returns Favorites for a specific model
         """
@@ -26,7 +26,7 @@ class FavoriteManager(models.Manager):
         """ Returns Favorites for a specific object
         """
         content_type = ContentType.objects.get_for_model(type(obj))
-        qs = self.get_query_set().filter(content_type=content_type, 
+        qs = self.get_query_set().filter(content_type=content_type,
                                          object_id=obj.pk)
         if user:
             qs = qs.filter(user=user)
@@ -67,16 +67,24 @@ class FavoriteManager(models.Manager):
                                     user=user, object_id=obj.pk)
 
     @classmethod
-    def create_favorite(cls, content_object, user):
+    def create_favorite(cls, content_object, user, score=2.5):
         content_type = ContentType.objects.get_for_model(type(content_object))
         favorite = Favorite(
             user=user,
             content_type=content_type,
             object_id=content_object.pk,
-            content_object=content_object
+            content_object=content_object,
+            score=score
             )
         favorite.save()
         return favorite
+
+    def average_score_for_object(self, obj):
+        qs = self.favorites_for_object(obj).aggregate(models.Avg('score'))
+        return qs.get('score__avg', None)
+
+    def num_favorites_for_object(self, obj):
+        return self.favorites_for_object(obj).count()
 
 class Favorite(models.Model):
     user = models.ForeignKey(User)
@@ -84,17 +92,25 @@ class Favorite(models.Model):
     object_id = models.TextField(_('object ID'))
     content_object = generic.GenericForeignKey('content_type', 'object_id')
 
-    created_on = models.DateTimeField(auto_now_add=True)
-    
+    score = models.FloatField(default=2.5)
+    created_on = models.DateTimeField(auto_now_add=True, auto_now=True)
+
     objects = FavoriteManager()
 
     class Meta:
         verbose_name = _('favorite')
         verbose_name_plural = _('favorites')
         unique_together = (('user', 'content_type', 'object_id'),)
-    
+
     def __unicode__(self):
         return "%s likes %s" % (self.user, self.content_object)
+
+    def average_score(self):
+        qs = Favorite.objects.filter(content_type=self.content_type, object_id=self.object_id).aggregate(models.Avg('score'))
+        return qs.get('score__avg')
+
+    def num_favorites(self):
+        return Favorite.objects.filter(content_type=self.content_type, object_id=self.object_id).count()
 
 @receiver(models.signals.post_delete)
 def remove_favorites(sender, **kwargs):
