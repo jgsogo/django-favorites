@@ -1,4 +1,5 @@
 from django.db import models, connection
+from django.dispatch import receiver
 from django.contrib.auth.models import User
 from django.utils.translation import ugettext_lazy as _
 from django.contrib.contenttypes.models import ContentType
@@ -37,6 +38,9 @@ class Favorite(models.Model):
     #: Boolean to know if this favorite is shared
     shared = models.BooleanField(default=False)
 
+    #: Score given for this user to this favorite
+    score = models.FloatField(default=2.5)
+
     #: see :class:`favorites.managers.FaovriteManger`
     objects = FavoriteManager()
 
@@ -49,3 +53,19 @@ class Favorite(models.Model):
     def __unicode__(self):
         object_repr = unicode(self.content_object)
         return u"%s likes %s" % (self.user, object_repr)
+        return "%s likes %s" % (self.user, self.content_object)
+
+    def average_score(self):
+        qs = Favorite.objects.filter(content_type=self.content_type, object_id=self.object_id).aggregate(models.Avg('score'))
+        return qs.get('score__avg')
+
+    def num_favorites(self):
+        return Favorite.objects.filter(content_type=self.content_type, object_id=self.object_id).count()
+
+@receiver(models.signals.post_delete)
+def remove_favorites(sender, **kwargs):
+    instance = kwargs.get('instance')
+    try:
+        Favorite.objects.favorites_for_object(instance).delete()
+    except:
+        pass

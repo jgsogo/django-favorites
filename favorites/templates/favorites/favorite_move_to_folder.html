@@ -1,5 +1,5 @@
 <h1>Move « {{ favorite.content_object }} » favorite to « {{ folder.name }} » folder</h1>
-<form method="POST" action="{% url favorites:favorite_move favorite.pk %}?next={{next}}">{% csrf_token %}
+<form method="POST" action="{% url 'favorites:favorite_move' favorite.pk %}?next={{next}}">{% csrf_token %}
     {{ form }}
     <input type="submit" value="Move"/>
 </form>

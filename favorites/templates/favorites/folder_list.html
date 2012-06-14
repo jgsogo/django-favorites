@@ -1,7 +1,7 @@
-<h1>Folder list [<a href="{% url favorites:folder_add %}?next={% url favorites:folder_list %}">add</a>]</h1>
+<h1>Folder list [<a href="{% url 'favorites:folder_add' %}?next={% url 'favorites:folder_list' %}">add</a>]</h1>
 <ul>
 {% for object in object_list %}
-    <li>{{ object.name }} [<a href="{% url favorites:folder_update object.id %}?next={% url favorites:folder_list %}">update</a>][<a href="{% url favorites:folder_delete object.id %}?next={% url favorites:folder_list %}">delete</a>]</li>
+    <li>{{ object.name }} [<a href="{% url 'favorites:folder_update' object.id %}?next={% url 'favorites:folder_list' %}">update</a>][<a href="{% url 'favorites:folder_delete' object.id %}?next={% url 'favorites:folder_list' %}">delete</a>]</li>
 {% endfor %}
 </ul>
 </a>

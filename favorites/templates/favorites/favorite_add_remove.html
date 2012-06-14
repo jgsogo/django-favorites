@@ -27,7 +27,7 @@ $(document).ready(function(){
             });
         }else{
             $.ajax({
-                url: "{% url favorite_ajax_add %}",
+                url: "{% url 'favorite_ajax_add' %}",
                 type: "POST",
                 data: {
                     content_type_id: {{ content_type_id }},

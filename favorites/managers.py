@@ -16,7 +16,7 @@ class FavoritesManagerMixin(object):
         pk_field = "%s.%s" % (qn(self.model._meta.db_table),
                               qn(self.model._meta.pk.column))
 
-        favorite_sql = """(SELECT 1 FROM %(favorites_db_table)s 
+        favorite_sql = """(SELECT 1 FROM %(favorites_db_table)s
 WHERE %(favorites_db_table)s.object_id = %(pk_field)s and
       %(favorites_db_table)s.content_type_id = %(content_type)d and
       %(favorites_db_table)s.user_id = %(user_id)d)
@@ -55,7 +55,7 @@ class FavoriteManager(models.Manager):
     def favorites_for_object(self, obj, user=None):
         """Returns Favorites for a specific object"""
         content_type = ContentType.objects.get_for_model(type(obj))
-        qs = self.get_query_set().filter(content_type=content_type, 
+        qs = self.get_query_set().filter(content_type=content_type,
                                          object_id=obj.pk)
         if user:
             qs = qs.filter(user=user)
@@ -93,8 +93,8 @@ class FavoriteManager(models.Manager):
 
     @classmethod
     def create_favorite(cls, content_object, user, folder=None):
-        """create a :class:`favorites.models.Favorite` 
-        
+        """create a :class:`favorites.models.Favorite`
+
         :param content_object: object which is favorited.
         :param user: :class:`django.contrib.auth.models.User` for which the favorite is created.
         :param folder: :class:`favorites.models.Folder` where to put the favorite in. This should be
@@ -112,3 +112,10 @@ class FavoriteManager(models.Manager):
             )
         favorite.save()
         return favorite
+
+    def average_score_for_object(self, obj):
+        qs = self.favorites_for_object(obj).aggregate(models.Avg('score'))
+        return qs.get('score__avg', None)
+
+    def num_favorites_for_object(self, obj):
+        return self.favorites_for_object(obj).count()
