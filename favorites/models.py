@@ -61,6 +61,10 @@ class Favorite(models.Model):
     def num_favorites(self):
         return Favorite.objects.filter(content_type=self.content_type, object_id=self.object_id).count()
 
+
+""" Stuff related to signals """
+from favorites.signals import object_favorites_count
+
 @receiver(models.signals.post_delete)
 def remove_favorites(sender, **kwargs):
     instance = kwargs.get('instance')
@@ -68,3 +72,10 @@ def remove_favorites(sender, **kwargs):
         Favorite.objects.favorites_for_object(instance).delete()
     except:
         pass
+
+@receiver(models.signals.post_save, sender=Favorite)
+def on_new_favorite(sender, instance, created, **kwargs):
+    if created:
+        count = instance.num_favorites()
+        rating = instance.average_score()
+        object_favorites_count.send(sender=instance.content_object.__class__, instance=instance.content_object, count=count, rating=rating)
