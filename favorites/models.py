@@ -34,7 +34,7 @@ class Favorite(models.Model):
     #: :class:`favorites.models.Folder`` in which the favorite can be found.
     folder = models.ForeignKey(Folder, null=True, blank=True)
     #: Date of creation
-    created_on = models.DateTimeField(auto_now_add=True)
+    created_on = models.DateTimeField(auto_now_add=True, auto_now=True)
     #: Boolean to know if this favorite is shared
     shared = models.BooleanField(default=False)
 
@@ -53,7 +53,6 @@ class Favorite(models.Model):
     def __unicode__(self):
         object_repr = unicode(self.content_object)
         return u"%s likes %s" % (self.user, object_repr)
-        return "%s likes %s" % (self.user, self.content_object)
 
     def average_score(self):
         qs = Favorite.objects.filter(content_type=self.content_type, object_id=self.object_id).aggregate(models.Avg('score'))
